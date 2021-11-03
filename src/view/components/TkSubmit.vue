@@ -8,7 +8,7 @@
             type="textarea"
             ref="textarea"
             v-model="comment"
-            :placeholder="config.COMMENT_PLACEHOLDER ? config.COMMENT_PLACEHOLDER.replace(/<br>/g, '\n') : ''"
+            :placeholder="commentPlaceholder"
             :autosize="{ minRows: 3 }"
             @input="onCommentInput"
             @keyup.enter.native="onEnterKeyUp($event)" />
@@ -51,7 +51,7 @@ import iconImage from '@fortawesome/fontawesome-free/svgs/regular/image.svg'
 import Clickoutside from 'element-ui/src/utils/clickoutside'
 import TkAvatar from './TkAvatar.vue'
 import TkMetaInput from './TkMetaInput.vue'
-import { marked, call, logger, renderLinks, renderMath, renderCode, initOwoEmotion, initMarkedOwo, t } from '../../js/utils'
+import { marked, call, logger, renderLinks, renderMath, renderCode, initOwoEmotion, initMarkedOwo, t, getUrl } from '../../js/utils'
 import OwO from '../../lib/owo'
 
 const imageTypes = [
@@ -104,6 +104,11 @@ export default {
     },
     textarea () {
       return this.$refs.textarea ? this.$refs.textarea.$refs.textarea : null
+    },
+    commentPlaceholder () {
+      let ph = this.$twikoo.placeholder || this.config.COMMENT_PLACEHOLDER || ''
+      ph = ph.replace(/<br>/g, '\n')
+      return ph
     }
   },
   methods: {
@@ -162,10 +167,7 @@ export default {
     },
     async send () {
       this.isSending = true
-      const url = this.$twikoo.path
-        // eslint-disable-next-line no-eval
-        ? eval(this.$twikoo.path)
-        : window.location.pathname
+      const url = getUrl(this.$twikoo.path)
       const comment = {
         nick: this.nick,
         mail: this.mail,
@@ -234,14 +236,21 @@ export default {
       const nameSplit = photo.name.split('.')
       const fileType = nameSplit.length > 1 ? nameSplit.pop() : ''
       if (imageTypes.indexOf(fileType) === -1) return
-      const userId = this.$tcb.auth.currentUser.uid
+      const userId = this.getUserId()
       const fileIndex = `${Date.now()}-${userId}`
       const fileName = nameSplit.join('.')
       this.paste(this.getImagePlaceholder(fileIndex, fileType))
-      if (this.config.IMAGE_CDN === '7bu') {
+      if (this.config.IMAGE_CDN === '7bu' || !this.$tcb) {
         this.uploadPhotoTo7Bu(fileIndex, fileName, fileType, photo)
       } else {
         this.uploadPhotoToQcloud(fileIndex, fileName, fileType, photo)
+      }
+    },
+    getUserId () {
+      if (this.$tcb) {
+        return this.$tcb.auth.currentUser.uid
+      } else {
+        return localStorage.getItem('twikoo-access-token')
       }
     },
     async uploadPhotoToQcloud (fileIndex, fileName, fileType, photo) {
@@ -382,7 +391,8 @@ export default {
   margin-left: 3rem;
   margin-bottom: 1rem;
   padding: 5px 15px;
-  border: 1px solid #80808050;
+  border: 1px solid rgba(128,128,128,0.31);
   border-radius: 4px;
+  word-break: break-word;
 }
 </style>

@@ -1,13 +1,13 @@
 <template>
   <div class="tk-admin-config" v-loading="loading">
     <div class="tk-admin-warn" v-if="clientVersion !== serverVersion">
-      <span>前端版本：{{ clientVersion }}，</span>
-      <span>云函数版本：{{ serverVersion }}，</span>
+      <span>{{ t('ADMIN_CLIENT_VERSION') }}{{ clientVersion }}，</span>
+      <span>{{ t('ADMIN_SERVER_VERSION') }}{{ serverVersion }}，</span>
       <span>请参考&nbsp;<a href="https://twikoo.js.org/quick-start.html#%E7%89%88%E6%9C%AC%E6%9B%B4%E6%96%B0" target="_blank">版本更新</a>&nbsp;进行升级</span>
     </div>
     <div class="tk-admin-config-groups">
-      <div class="tk-admin-config-group" v-for="settingGroup in settings" :key="settingGroup.name">
-        <div class="tk-admin-config-group-title">{{ settingGroup.name }}</div>
+      <details class="tk-admin-config-group" v-for="settingGroup in settings" :key="settingGroup.name">
+        <summary class="tk-admin-config-group-title">{{ settingGroup.name }}</summary>
         <div class="tk-admin-config-item" v-for="setting in settingGroup.items" :key="setting.key">
           <div class="tk-admin-config-title" :title="setting.key">{{ setting.key }}</div>
           <div class="tk-admin-config-input">
@@ -16,7 +16,19 @@
           <div></div>
           <div class="tk-admin-config-desc">{{ setting.desc }}</div>
         </div>
-      </div>
+      </details>
+      <details class="tk-admin-config-group">
+        <summary class="tk-admin-config-group-title">{{ t('ADMIN_CONFIG_EMAIL_TEST') }}</summary>
+        <div class="tk-admin-config-email-test">
+          <div class="tk-admin-config-email-test-desc">{{ t('ADMIN_CONFIG_EMAIL_TEST_HELP') }}</div>
+          <div class="tk-admin-config-input">
+            <el-input v-model="emailTestAddress" size="small">
+              <el-button slot="append" type="info" @click="testEmail">{{ t('ADMIN_CONFIG_EMAIL_TEST_BTN') }}</el-button>
+            </el-input>
+          </div>
+          <div class="tk-admin-config-email-test-desc">{{ t('ADMIN_CONFIG_EMAIL_TEST_RESULT') }}{{ emailTestResult }}</div>
+        </div>
+      </details>
     </div>
     <div class="tk-admin-config-actions">
       <el-button size="small" type="primary" @click="saveConfig">{{ t('ADMIN_CONFIG_SAVE') }}</el-button>
@@ -40,6 +52,7 @@ export default {
           items: [
             { key: 'SITE_NAME', desc: t('ADMIN_CONFIG_ITEM_SITE_NAME'), ph: `${t('ADMIN_CONFIG_EXAMPLE')}虹墨空间站`, value: '' },
             { key: 'SITE_URL', desc: t('ADMIN_CONFIG_ITEM_SITE_URL'), ph: `${t('ADMIN_CONFIG_EXAMPLE')}https://www.imaegoo.com`, value: '' },
+            { key: 'CORS_ALLOW_ORIGIN', desc: t('ADMIN_CONFIG_ITEM_CORS_ALLOW_ORIGIN'), ph: `${t('ADMIN_CONFIG_EXAMPLE')}https://www.imaegoo.com`, value: '' },
             { key: 'BLOGGER_EMAIL', desc: t('ADMIN_CONFIG_ITEM_BLOGGER_EMAIL'), ph: `${t('ADMIN_CONFIG_EXAMPLE')}12345@qq.com`, value: '' },
             { key: 'COMMENT_PAGE_SIZE', desc: t('ADMIN_CONFIG_ITEM_COMMENT_PAGE_SIZE'), ph: `${t('ADMIN_CONFIG_EXAMPLE')}8`, value: '' },
             { key: 'MASTER_TAG', desc: t('ADMIN_CONFIG_ITEM_MASTER_TAG'), ph: `${t('ADMIN_CONFIG_EXAMPLE')}站长`, value: '' },
@@ -69,6 +82,7 @@ export default {
             { key: 'QCLOUD_SECRET_ID', desc: t('ADMIN_CONFIG_ITEM_QCLOUD_SECRET_ID'), ph: `${t('ADMIN_CONFIG_EXAMPLE')}AKIDBgZDdnbTw9D4ey9qPkrkwtb2Do9EwIHw`, value: '' },
             { key: 'QCLOUD_SECRET_KEY', desc: t('ADMIN_CONFIG_ITEM_QCLOUD_SECRET_KEY'), ph: `${t('ADMIN_CONFIG_EXAMPLE')}XrkOnvKWS7WeXbP1QZT76rPgtpWx73D7`, value: '', secret: true },
             { key: 'LIMIT_PER_MINUTE', desc: t('ADMIN_CONFIG_ITEM_LIMIT_PER_MINUTE'), ph: `${t('ADMIN_CONFIG_EXAMPLE')}5`, value: '' },
+            { key: 'LIMIT_PER_MINUTE_ALL', desc: t('ADMIN_CONFIG_ITEM_LIMIT_PER_MINUTE_ALL'), ph: `${t('ADMIN_CONFIG_EXAMPLE')}5`, value: '' },
             { key: 'FORBIDDEN_WORDS', desc: t('ADMIN_CONFIG_ITEM_FORBIDDEN_WORDS'), ph: `${t('ADMIN_CONFIG_EXAMPLE')}快递,空包`, value: '' },
             { key: 'NOTIFY_SPAM', desc: t('ADMIN_CONFIG_ITEM_NOTIFY_SPAM'), ph: `${t('ADMIN_CONFIG_EXAMPLE')}false`, value: '' }
           ]
@@ -79,6 +93,7 @@ export default {
             { key: 'SC_SENDKEY', desc: t('ADMIN_CONFIG_ITEM_SC_SENDKEY'), ph: `${t('ADMIN_CONFIG_EXAMPLE')}SCT1364TKdsiGjGvyAZNYDVnuHW12345`, value: '' },
             { key: 'QM_SENDKEY', desc: t('ADMIN_CONFIG_ITEM_QM_SENDKEY'), ph: `${t('ADMIN_CONFIG_EXAMPLE')}k2ni28jkmn72tqdvqryt9827u0o9nbpok`, value: '' },
             { key: 'PUSH_PLUS_TOKEN', desc: t('ADMIN_CONFIG_ITEM_PUSH_PLUS_TOKEN'), ph: `${t('ADMIN_CONFIG_EXAMPLE')}f8ae2b8a107a408b803896a0ec012345`, value: '' },
+            { key: 'WECOM_API_URL', desc: t('ADMIN_CONFIG_ITEM_WECOM_API_URL'), ph: `${t('ADMIN_CONFIG_EXAMPLE')}https://xxx.ap-shanghai.app.tcloudbase.com/自定义api云函数?id=ww***&secert=Ne***&agentId=10***03&msg=`, value: '' },
             { key: 'SC_MAIL_NOTIFY', desc: t('ADMIN_CONFIG_ITEM_SC_MAIL_NOTIFY'), ph: `${t('ADMIN_CONFIG_EXAMPLE')}true`, value: '' }
           ]
         },
@@ -94,10 +109,8 @@ export default {
             { key: 'SMTP_USER', desc: t('ADMIN_CONFIG_ITEM_SMTP_USER'), ph: `${t('ADMIN_CONFIG_EXAMPLE')}blog@imaegoo.com`, value: '' },
             { key: 'SMTP_PASS', desc: t('ADMIN_CONFIG_ITEM_SMTP_PASS'), ph: `${t('ADMIN_CONFIG_EXAMPLE')}password`, value: '', secret: true },
             { key: 'MAIL_SUBJECT', desc: t('ADMIN_CONFIG_ITEM_MAIL_SUBJECT'), ph: `${t('ADMIN_CONFIG_EXAMPLE')}您在虹墨空间站上的评论收到了回复`, value: '' },
-            // eslint-disable-next-line no-template-curly-in-string
             { key: 'MAIL_TEMPLATE', desc: t('ADMIN_CONFIG_ITEM_MAIL_TEMPLATE'), ph: '', value: '' },
             { key: 'MAIL_SUBJECT_ADMIN', desc: t('ADMIN_CONFIG_ITEM_MAIL_SUBJECT_ADMIN'), ph: `${t('ADMIN_CONFIG_EXAMPLE')}虹墨空间站上有新评论了`, value: '' },
-            // eslint-disable-next-line no-template-curly-in-string
             { key: 'MAIL_TEMPLATE_ADMIN', desc: t('ADMIN_CONFIG_ITEM_MAIL_TEMPLATE_ADMIN'), ph: '', value: '' }
           ]
         }
@@ -105,7 +118,9 @@ export default {
       serverConfig: {},
       serverVersion: this.$twikoo.serverConfig.VERSION,
       clientVersion: version,
-      message: ''
+      message: '',
+      emailTestAddress: '',
+      emailTestResult: ''
     }
   },
   methods: {
@@ -146,6 +161,13 @@ export default {
       await this.readConfig()
       this.message = '保存成功'
       this.loading = false
+    },
+    async testEmail () {
+      this.loading = true
+      const testResult = await call(this.$tcb, 'EMAIL_TEST', { mail: this.emailTestAddress })
+      logger.log('邮件测试', testResult)
+      this.emailTestResult = JSON.stringify(testResult)
+      this.loading = false
     }
   },
   mounted () {
@@ -158,6 +180,10 @@ export default {
 .tk-admin-config-groups {
   overflow-y: auto;
   padding-right: 0.5em;
+}
+.tk-admin-config-groups .tk-admin-config-group,
+.tk-admin-config-groups .tk-admin-config-group-title {
+  background: transparent;
 }
 .tk-admin-config-group-title {
   margin-top: 1em;
@@ -190,5 +216,8 @@ export default {
 .tk-admin-config-message {
   margin-top: 0.5em;
   text-align: center;
+}
+.tk-admin-config-email-test-desc {
+  margin: 1em 0;
 }
 </style>

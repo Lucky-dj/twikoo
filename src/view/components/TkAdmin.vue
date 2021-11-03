@@ -9,6 +9,7 @@
       <div v-if="!needUpdate">
         <div class="tk-login" v-if="!isLogin && isSetPassword">
           <div class="tk-login-title">{{ t('ADMIN_LOGIN_TITLE') }}</div>
+          <input type="hidden" />
           <el-input class="tk-password" :placeholder="t('ADMIN_PASSWORD_PLACEHOLDER')" v-model="password" show-password @keyup.enter.native="onLogin" ref="focusme">
             <template slot="prepend">{{ t('ADMIN_PASSWORD') }}</template>
             <el-button slot="append" @click="onLogin">{{ t('ADMIN_LOGIN') }}</el-button>
@@ -121,15 +122,24 @@ export default {
         } catch (err) {
           logger.error('登录失败', err)
         }
+      } else if (res.result.code === 0) {
+        logger.log('登录成功')
+        localStorage.setItem('twikoo-access-token', passwordMd5)
+        this.password = ''
+        this.checkAuth()
       }
       this.loading = false
     },
     async onLogout () {
       this.loading = true
-      await this.$tcb.auth.signOut()
-      await this.$tcb.auth
-        .anonymousAuthProvider()
-        .signIn()
+      if (this.$tcb) {
+        await this.$tcb.auth.signOut()
+        await this.$tcb.auth
+          .anonymousAuthProvider()
+          .signIn()
+      } else {
+        localStorage.removeItem('twikoo-access-token')
+      }
       this.isLogin = false
       this.loading = false
     },
@@ -165,13 +175,20 @@ export default {
     focusPassword () {
       // 聚焦密码输入框
       setTimeout(() => {
-        this.$refs.focusme.focus()
+        this.$refs.focusme && this.$refs.focusme.focus()
       }, 500)
     },
     async checkAuth () {
       // 检查用户身份
-      const currentUser = await this.$tcb.auth.getCurrenUser()
-      this.isLogin = currentUser.loginType === 'CUSTOM'
+      if (this.$tcb) {
+        const currentUser = await this.$tcb.auth.getCurrenUser()
+        this.isLogin = currentUser.loginType === 'CUSTOM'
+      } else {
+        const result = await call(this.$tcb, 'GET_CONFIG')
+        if (result && result.result && result.result.config) {
+          this.isLogin = result.result.config.IS_ADMIN
+        }
+      }
     },
     async checkIfPasswordSet () {
       // 检查是否设置过密码
@@ -179,6 +196,7 @@ export default {
         const res = await call(this.$tcb, 'GET_PASSWORD_STATUS')
         this.version = res.result.version
         this.isSetPassword = res.result.status
+        this.isSetCredentials = !this.$tcb
       } catch (e) {
         this.needUpdate = true
         this.loading = false
@@ -216,7 +234,7 @@ export default {
   height: 100%;
   overflow-y: auto;
   pointer-events: all;
-  background-color: #00000099;
+  background-color: rgba(0,0,0,0.60);
   backdrop-filter: blur(5px);
   transition: all 0.5s ease;
 }
@@ -228,7 +246,7 @@ export default {
   background-color: transparent;
 }
 .tk-admin::-webkit-scrollbar-thumb {
-  background-color: #ffffff50;
+  background-color: rgba(255,255,255,0.31);
 }
 .tk-admin.__show {
   left: 0;

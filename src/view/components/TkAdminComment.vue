@@ -1,8 +1,8 @@
 <template>
   <div class="tk-admin-comment" v-loading="loading">
     <div class="tk-admin-warn" v-if="clientVersion !== serverVersion">
-      <span>前端版本：{{ clientVersion }}，</span>
-      <span>云函数版本：{{ serverVersion }}，</span>
+      <span>{{ t('ADMIN_CLIENT_VERSION') }}{{ clientVersion }}，</span>
+      <span>{{ t('ADMIN_SERVER_VERSION') }}{{ serverVersion }}，</span>
       <span>请参考&nbsp;<a href="https://twikoo.js.org/quick-start.html#%E7%89%88%E6%9C%AC%E6%9B%B4%E6%96%B0" target="_blank">版本更新</a>&nbsp;进行升级</span>
     </div>
     <div class="tk-admin-comment-filter">
@@ -10,13 +10,14 @@
           class="tk-admin-comment-filter-keyword"
           size="small"
           v-model="filter.keyword"
-          placeholder="搜索昵称、邮箱、网址、IP、评论正文、文章地址" />
+          :placeholder="t('ADMIN_COMMENT_SEARCH_PLACEHOLDER')"
+          @keyup.enter.native="getComments" />
       <select class="tk-admin-comment-filter-type" v-model="filter.type">
-        <option value="">全部</option>
-        <option value="VISIBLE">只看可见</option>
-        <option value="HIDDEN">只看隐藏</option>
+        <option value="">{{ t('ADMIN_COMMENT_FILTER_ALL') }}</option>
+        <option value="VISIBLE">{{ t('ADMIN_COMMENT_FILTER_VISIBLE') }}</option>
+        <option value="HIDDEN">{{ t('ADMIN_COMMENT_FILTER_HIDDEN') }}</option>
       </select>
-      <el-button size="small" type="primary" @click="getComments">搜索</el-button>
+      <el-button size="small" type="primary" @click="getComments">{{ t('ADMIN_COMMENT_SEARCH') }}</el-button>
     </div>
     <div class="tk-admin-comment-list" ref="comment-list">
       <div class="tk-admin-comment-item" v-for="comment in comments" :key="comment._id">
@@ -26,6 +27,7 @@
           <a v-if="comment.link" :href="convertLink(comment.link)" target="_blank">{{ comment.nick }}</a>
           <span v-if="comment.mail">&nbsp;(<a :href="`mailto:${comment.mail}`">{{ comment.mail }}</a>)</span>
           <span v-if="comment.isSpam">{{ t('ADMIN_COMMENT_IS_SPAM_SUFFIX') }}</span>
+          <span class="tk-time">&nbsp;{{ displayCreated(comment) }}</span>
         </div>
         <div class="tk-content" v-html="comment.comment" ref="comments"></div>
         <div class="tk-admin-actions">
@@ -47,7 +49,7 @@
 </template>
 
 <script>
-import { call, convertLink, renderLinks, renderMath, renderCode, t } from '../../js/utils'
+import { timeago, call, convertLink, renderLinks, renderMath, renderCode, t } from '../../js/utils'
 import { version } from '../../../package.json'
 import TkAvatar from './TkAvatar.vue'
 import TkPagination from './TkPagination.vue'
@@ -74,7 +76,12 @@ export default {
   },
   methods: {
     t,
-    convertLink,
+    displayCreated (comment) {
+      return timeago(comment.created)
+    },
+    convertLink (link) {
+      return convertLink(link)
+    },
     async getComments () {
       this.loading = true
       const res = await call(this.$tcb, 'COMMENT_GET_FOR_ADMIN', {
@@ -180,7 +187,7 @@ export default {
   padding: 0 0.5em;
   color: #ffffff;
   background: none;
-  border: 1px solid #90939950;
+  border: 1px solid rgba(144,147,153,0.31);
   border-radius: 4px;
   position: relative;
   -moz-appearance: none;
@@ -188,6 +195,9 @@ export default {
 }
 .tk-admin-comment-filter-type:focus {
   border-color: #409eff;
+}
+.tk-admin-comment-filter-type option {
+  color: initial;
 }
 .tk-admin-comment-list {
   margin-top: 1em;
